@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  scraper:
+    build: .
+    env_file: .env
+    depends_on:
+      - redis
+    volumes:
+      - ./creators.csv:/app/creators.csv
+      - ./output:/app/output
+    command: python cli.py --input creators.csv --concurrency 4
+
+  worker:
+    build: .
+    env_file: .env
+    depends_on:
+      - redis
+    volumes:
+      - ./output:/app/output
+    command: rq worker --url redis://redis:6379/0
+
+volumes:
+  redis_data:
